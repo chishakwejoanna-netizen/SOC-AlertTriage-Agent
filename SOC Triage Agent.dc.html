@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="./styles.css">
+</helmet>
+<div style="height:100vh; display:flex; flex-direction:column; font-family:var(--font-body); background:var(--color-bg); color:var(--color-text); overflow:hidden;">
+  <div class="nav" style="flex:none;">
+    <div class="nav-brand">{{ orgName }} · Aegis Triage</div>
+    <a href="#" aria-current="{{ nav.queueAria }}" onClick="{{ nav.toQueue }}">Alert Queue</a>
+    <a href="#" aria-current="{{ nav.runbooksAria }}" onClick="{{ nav.toRunbooks }}">Runbooks</a>
+    <div style="margin-left:auto; font-size:12px; opacity:0.65;">Avg triage: <strong>{{ statLine.agent }}</strong> · Manual avg: <strong>{{ statLine.manual }}</strong></div>
+  </div>
+
+  <sc-if value="{{ nav.isQueue }}" hint-placeholder-val="{{ true }}">
+    <div style="flex:1; display:grid; grid-template-columns: 300px 1fr 340px; overflow:hidden; min-height:0;">
+      <div style="border-right:2px solid var(--color-divider); overflow-y:auto; padding: var(--space-3);">
+        <h6 style="opacity:0.6; margin-bottom:var(--space-3);">Alert Queue · {{ queueCount }}</h6>
+        <div style="display:flex; flex-direction:column; gap:var(--space-2);">
+          <sc-for list="{{ queueItems }}" as="item" hint-placeholder-count="6">
+            <div style="cursor:pointer; padding:var(--space-2) var(--space-3); background:{{ item.rowBg }}; border:1px solid var(--color-divider);" onClick="{{ item.onSelect }}">
+              <div style="display:flex; justify-content:space-between; gap:8px; margin-bottom:4px;">
+                <span class="tag {{ item.severityTagClass }}">{{ item.severityLabel }}</span>
+                <span class="tag {{ item.statusTagClass }}">{{ item.statusLabel }}</span>
+              </div>
+              <div style="font-family:var(--font-heading); font-weight:700; font-size:13.5px; margin-bottom:2px;">{{ item.title }}</div>
+              <div style="font-size:11px; opacity:0.6;">{{ item.source }} · {{ item.timestamp }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="overflow-y:auto; padding: var(--space-4) var(--space-6); border-right:2px solid var(--color-divider);">
+        <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:6px;">
+          <h3 style="margin:0;">{{ current.title }}</h3>
+          <span class="tag {{ current.statusTagClass }}">{{ current.statusLabel }}</span>
+        </div>
+        <div style="font-size:12px; opacity:0.6; margin-bottom:var(--space-4);">{{ current.source }} · {{ current.asset }} · {{ current.timestamp }}</div>
+
+        <div style="display:flex; gap:var(--space-6); margin-bottom:var(--space-4); flex-wrap:wrap;">
+          <div>
+            <div style="font-size:11px; opacity:0.55; text-transform:uppercase; letter-spacing:.08em; margin-bottom:2px;">Indicator</div>
+            <div style="font-family:monospace; font-size:13px;">{{ current.indicator }}</div>
+          </div>
+          <div>
+            <div style="font-size:11px; opacity:0.55; text-transform:uppercase; letter-spacing:.08em; margin-bottom:2px;">Type</div>
+            <div style="font-size:13px;">{{ current.indicatorType }}</div>
+          </div>
+          <div>
+            <div style="font-size:11px; opacity:0.55; text-transform:uppercase; letter-spacing:.08em; margin-bottom:2px;">OTX Reputation</div>
+            <div style="font-size:13px;">{{ current.otxReputation }}</div>
+          </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <div style="margin-bottom:var(--space-4);">
+          <div style="display:flex; align-items:center; justify-content:space-between; cursor:pointer;" onClick="{{ current.toggleTrace }}">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+              <strong style="font-family:var(--font-heading); font-size:14px;">Agent Trace</strong>
+              <span style="font-size:12px; opacity:0.55;">{{ current.stepCount }} tool calls · {{ current.totalTime }}</span>
+            </div>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="transform: rotate({{ current.chevronDeg }}deg); transition: transform .15s;"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </div>
+          <sc-if value="{{ current.traceOpen }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-top:var(--space-3); display:flex; flex-direction:column; gap:var(--space-2);">
+              <sc-for list="{{ current.traceSteps }}" as="step" hint-placeholder-count="4">
+                <div style="display:flex; gap:10px; padding:var(--space-2) var(--space-3); background:var(--color-surface);">
+                  <div style="flex:none; opacity:0.7; margin-top:2px;">
+                    <sc-if value="{{ step.isReasoning }}" hint-placeholder-val="{{ false }}">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path><path d="m9 12 2 2 4-4"></path></svg>
+                    </sc-if>
+                    <sc-if value="{{ step.isTool }}" hint-placeholder-val="{{ true }}">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+                    </sc-if>
+                  </div>
+                  <div style="flex:1;">
+                    <div style="display:flex; justify-content:space-between; gap:8px;">
+                      <span style="font-size:12px; font-weight:700; font-family:var(--font-heading);">{{ step.tool }}</span>
+                      <span style="font-size:11px; opacity:0.5;">{{ step.time }}</span>
+                    </div>
+                    <div style="font-size:12.5px; margin-top:2px;">{{ step.label }}</div>
+                    <div style="font-size:12px; opacity:0.7; margin-top:2px;">{{ step.detail }}</div>
+                    <sc-if value="{{ step.hasRunbookLink }}" hint-placeholder-val="{{ false }}">
+                      <button class="btn btn-ghost" style="padding:0; margin-top:4px; font-size:11px;" onClick="{{ step.goToRunbook }}">View {{ step.runbookRefLabel }} →</button>
+                    </sc-if>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+        </div>
+
+        <div class="hr"></div>
+
+        <div style="margin-bottom:var(--space-4);">
+          <h6 style="opacity:0.6; margin-bottom:var(--space-2);">MITRE ATT&amp;CK Mapping</h6>
+          <div style="display:flex; gap:var(--space-2); flex-wrap:wrap;">
+            <sc-for list="{{ current.mitre }}" as="m" hint-placeholder-count="2">
+              <span class="tag tag-outline">{{ m.id }} — {{ m.name }}</span>
+            </sc-for>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:var(--space-4);">
+          <div class="card-kicker">Agent Verdict</div>
+          <div class="card-title" style="display:flex; align-items:center; gap:10px;">
+            <span class="tag {{ current.verdictTagClass }}">{{ current.verdictLabel }}</span>
+            <span style="font-size:13px; font-weight:400; opacity:0.7;">{{ current.confidence }}% confidence</span>
+          </div>
+          <p class="card-body">{{ current.verdictDetail }}</p>
+          <div class="card-meta">Runbook used: <button class="btn btn-ghost" style="padding:0;" onClick="{{ current.goToMatchedRunbook }}">{{ current.runbookMatchLabel }}</button></div>
+        </div>
+
+        <div class="field" style="margin-bottom:var(--space-3);">
+          <label>Draft ticket comment — {{ current.ticketId }}</label>
+          <textarea class="input" rows="9" style="opacity:{{ current.draftOpacity }};" readonly="{{ current.isReadOnly }}" value="{{ current.draftValue }}" onChange="{{ current.onDraftChange }}"></textarea>
+        </div>
+
+        <div style="display:flex; gap:var(--space-2); align-items:center; flex-wrap:wrap;">
+          <button class="btn btn-secondary" disabled="{{ current.actionsDisabled }}" onClick="{{ current.startEdit }}">Edit</button>
+          <button class="btn btn-primary" disabled="{{ current.actionsDisabled }}" onClick="{{ current.approve }}">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            Approve &amp; Send
+          </button>
+          <button class="btn btn-secondary" disabled="{{ current.actionsDisabled }}" onClick="{{ current.reject }}">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            Reject
+          </button>
+          <sc-if value="{{ current.statusMessage }}" hint-placeholder-val="{{ false }}">
+            <span style="font-size:12px; opacity:0.7;">{{ current.statusMessage }}</span>
+          </sc-if>
+        </div>
+      </div>
+
+      <div style="overflow:hidden; padding: var(--space-3); display:flex; flex-direction:column; min-height:0;">
+        <h6 style="opacity:0.6; margin-bottom:var(--space-2);">Ask or teach the agent</h6>
+        <div class="seg" style="margin-bottom:var(--space-3); flex:none;">
+          <label class="seg-opt"><input type="radio" name="chatmode" checked="{{ chat.isAsk }}" onChange="{{ chat.setAsk }}"/>Ask</label>
+          <label class="seg-opt"><input type="radio" name="chatmode" checked="{{ chat.isTeach }}" onChange="{{ chat.setTeach }}"/>Teach</label>
+        </div>
+
+        <sc-if value="{{ chat.isAsk }}" hint-placeholder-val="{{ true }}">
+          <div style="flex:1; display:flex; flex-direction:column; min-height:0;">
+            <div style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:var(--space-2); margin-bottom:var(--space-3);">
+              <sc-if value="{{ chat.isEmpty }}" hint-placeholder-val="{{ false }}">
+                <p style="font-size:12px; opacity:0.55;">Ask about confidence, the indicator, the MITRE mapping, the runbook used, or the ticket draft.</p>
+              </sc-if>
+              <sc-for list="{{ chat.log }}" as="msg" hint-placeholder-count="0">
+                <div style="align-self:{{ msg.align }}; max-width:90%; background:{{ msg.bg }}; color:{{ msg.color }}; padding:8px 12px; font-size:12.5px;">{{ msg.text }}</div>
+              </sc-for>
+            </div>
+            <div style="display:flex; gap:6px; flex:none;">
+              <input class="input" placeholder="Ask the agent…" value="{{ chat.input }}" onChange="{{ chat.setInput }}" onKeyDown="{{ chat.onKeyDown }}"/>
+              <button class="btn btn-icon btn-primary" onClick="{{ chat.send }}">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+              </button>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ chat.isTeach }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex; flex-direction:column; gap:var(--space-2); overflow-y:auto;">
+            <p style="font-size:12px; opacity:0.65;">Teach the agent a new rule in plain language. It's saved to the runbook KB immediately — no retraining.</p>
+            <div class="field"><label>Rule title</label><input class="input" value="{{ chat.teachTitle }}" onChange="{{ chat.setTeachTitle }}" placeholder="e.g. VPN logins from new countries"/></div>
+            <div class="field"><label>What should the agent do?</label><textarea class="input" rows="6" value="{{ chat.teachBody }}" onChange="{{ chat.setTeachBody }}" placeholder="If X happens, then…"></textarea></div>
+            <button class="btn btn-primary btn-block" disabled="{{ chat.teachDisabled }}" onClick="{{ chat.saveTeach }}">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              Save as new runbook
+            </button>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ nav.isRunbooks }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:1; overflow-y:auto; padding: var(--space-6);">
+      <h2>Runbook Knowledge Base</h2>
+      <p style="opacity:0.65; max-width:640px; margin-bottom:var(--space-6); font-size:13px;">Editable by any analyst. The agent retrieves from these entries at triage time — update one and every future match uses it immediately, no retraining.</p>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-4);">
+        <sc-for list="{{ runbooksView }}" as="rb" hint-placeholder-count="6">
+          <div class="card elev-sm" style="outline:{{ rb.outline }};">
+            <div style="display:flex; justify-content:space-between;">
+              <span class="card-kicker">{{ rb.id }}</span>
+              <span style="font-size:11px; opacity:0.5;">Updated {{ rb.updated }}</span>
+            </div>
+            <div class="card-title">{{ rb.title }}</div>
+            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+              <sc-for list="{{ rb.tagList }}" as="t" hint-placeholder-count="2"><span class="tag tag-neutral">{{ t }}</span></sc-for>
+            </div>
+            <sc-if value="{{ rb.isEditing }}" hint-placeholder-val="{{ false }}">
+              <textarea class="input" rows="7" value="{{ rb.editValue }}" onChange="{{ rb.onEditChange }}"></textarea>
+              <div style="display:flex; gap:8px;">
+                <button class="btn btn-primary" onClick="{{ rb.save }}">Save</button>
+                <button class="btn btn-secondary" onClick="{{ rb.cancel }}">Cancel</button>
+              </div>
+            </sc-if>
+            <sc-if value="{{ rb.isNotEditing }}" hint-placeholder-val="{{ true }}">
+              <p class="card-body" style="white-space:pre-wrap;">{{ rb.body }}</p>
+              <button class="btn btn-ghost" style="align-self:flex-start;" onClick="{{ rb.startEdit }}">Edit</button>
+            </sc-if>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed; bottom:20px; right:20px; background:var(--color-text); color:var(--color-bg); padding:10px 16px; font-size:13px; box-shadow:var(--shadow-lg); z-index:50;">{{ toast }}</div>
+  </sc-if>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1600,&quot;height&quot;:950},&quot;orgName&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Contoso Financial&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;agentSeconds&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:18,&quot;min&quot;:5,&quot;max&quot;:60,&quot;step&quot;:1,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Simulation&quot;},&quot;manualMinutes&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:12,&quot;min&quot;:1,&quot;max&quot;:30,&quot;step&quot;:1,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Simulation&quot;}}">
+const ALERTS = [
+  {
+    id: 'a1', title: 'Outbound connection to 185.220.101.47', severity: 'critical',
+    source: 'Palo Alto Firewall — PA-VM-Corp01', asset: 'WKSTN-FIN-0231 (10.42.8.114)',
+    timestamp: 'Today, 09:14 EDT', indicator: '185.220.101.47', indicatorType: 'IPv4 address',
+    otxReputation: 'Malicious — Tor exit node, Cobalt Strike C2 history (47 pulses)',
+    mitre: [{id:'T1071.001', name:'Application Layer Protocol: Web Protocols'}, {id:'T1041', name:'Exfiltration Over C2 Channel'}],
+    verdict: 'real_threat', confidence: 94,
+    verdictDetail: 'Confirmed malicious destination with repeating connection interval, and no legitimate business reason for a finance workstation to reach Tor-adjacent infrastructure. Recommend isolation.',
+    runbookMatch: {id:'RB-01', name:'Outbound C2 Beaconing Response'},
+    ticketId: 'TCK-4821',
+    totalTime: '18s',
+    ticketDraft: 'Confirmed outbound C2 beaconing from WKSTN-FIN-0231 (10.42.8.114) to 185.220.101.47.\n\nOTX: 47 pulses tagging this IP as a Tor exit node with Cobalt Strike C2 history, last seen 3 days ago. Connection pattern shows a repeating interval consistent with beaconing malware, not user browsing.\n\nMITRE: T1071.001 (Application Layer Protocol: Web Protocols), T1041 (Exfiltration Over C2 Channel).\n\nRecommendation: isolate WKSTN-FIN-0231 immediately, block 185.220.101.47 at the perimeter firewall, and escalate to Tier 2 for host forensics. — Drafted by Aegis Triage Agent, pending analyst approval.',
+    trace: [
+      {tool:'AlienVault OTX', label:'Queried indicator 185.220.101.47', detail:'47 pulses, tagged Tor exit node + Cobalt Strike C2. Last seen 3 days ago.', time:'2.1s', kind:'tool'},
+      {tool:'Asset Inventory', label:'Looked up WKSTN-FIN-0231', detail:'Finance workstation. No VPN/Tor use policy applies to this host.', time:'0.6s', kind:'tool'},
+      {tool:'Runbook KB Retrieval', label:'Matched RB-01 — Outbound C2 Beaconing Response', detail:'Similarity 0.91 — repeating interval + malicious-tagged destination.', time:'1.4s', kind:'tool', runbookRef:'RB-01'},
+      {tool:'MITRE ATT&CK Mapper', label:'Mapped to T1071.001, T1041', detail:'Traffic pattern matches a web-protocol C2 channel with periodic beaconing.', time:'0.9s', kind:'tool'},
+      {tool:'Reasoning', label:'Verdict: Real threat (94% confidence)', detail:'Confirmed malicious destination + no legitimate business reason for outbound Tor-adjacent traffic from a finance host.', time:'3.2s', kind:'reasoning'},
+    ],
+  },
+  {
+    id: 'a2', title: "User-reported phishing: 'Invoice Overdue - Action Required'", severity: 'low',
+    source: 'O365 Reported Message — Abuse Mailbox', asset: 'j.martinez@company.com',
+    timestamp: 'Today, 08:02 EDT', indicator: 'billing-support@secure-invoices-notify.com', indicatorType: 'Sender domain',
+    otxReputation: 'No pulses — domain registered 4yr, no malware association', 
+    mitre: [{id:'T1566.001', name:'Phishing: Spearphishing Link (tentative, dismissed)'}],
+    verdict: 'false_positive', confidence: 88,
+    verdictDetail: 'Sender domain and both embedded links have no OTX pulses and no malware association. Pattern matches legitimate (if unsolicited) billing spam, not a credential-phishing kit.',
+    runbookMatch: {id:'RB-02', name:'Phishing Triage & User-Reported Email'},
+    ticketId: 'TCK-4822',
+    totalTime: '14s',
+    ticketDraft: "Reviewed user-reported email from billing-support@secure-invoices-notify.com.\n\nOTX: 0 pulses on the sender domain or either embedded URL. Domain is 4 years old with no malware association on record.\n\nAssessment: false positive. This reads as generic invoice/billing spam rather than a credential-phishing attempt — no login form, no lookalike brand, no urgency-plus-credential-harvest pattern from RB-02.\n\nRecommendation: close as false positive, add sender domain to the spam filter's soft-block list, and send the reporter a one-line thanks + brief note on what a real phishing attempt looks like. — Drafted by Aegis Triage Agent, pending analyst approval.",
+    trace: [
+      {tool:'AlienVault OTX', label:'Queried sender domain + 2 embedded URLs', detail:'0 pulses, no malware history, domain age 4 years.', time:'1.8s', kind:'tool'},
+      {tool:'Runbook KB Retrieval', label:'Matched RB-02 — Phishing Triage & User-Reported Email', detail:'Similarity 0.87 — clean sender reputation, no credential-harvest indicators.', time:'1.1s', kind:'tool', runbookRef:'RB-02'},
+      {tool:'MITRE ATT&CK Mapper', label:'Tentatively considered T1566.001', detail:'Insufficient indicators to confirm a phishing-link technique; dismissed.', time:'0.7s', kind:'tool'},
+      {tool:'Reasoning', label:'Verdict: False positive (88% confidence)', detail:'Legitimate (if unwanted) billing spam. No isolation or credential reset needed — recommend user education only.', time:'2.4s', kind:'reasoning'},
+    ],
+  },
+  {
+    id: 'a3', title: '42 failed logins — svc-backup-prod', severity: 'medium',
+    source: 'Okta — Identity Provider', asset: 'svc-backup-prod (service account)',
+    timestamp: 'Today, 07:41 EDT', indicator: '203.0.113.88', indicatorType: 'Source IP',
+    otxReputation: 'Low confidence — 2 pulses tagging "scanning activity", shared hosting range',
+    mitre: [{id:'T1110.001', name:'Brute Force: Password Guessing'}, {id:'T1078', name:'Valid Accounts (attempted)'}],
+    verdict: 'needs_review', confidence: 61,
+    verdictDetail: 'Source reputation is inconclusive, but the target is a high-privilege service account with no MFA — RB-03 says route to analyst rather than auto-close even when the IP score is weak.',
+    runbookMatch: {id:'RB-03', name:'Brute Force / Credential Stuffing Response'},
+    ticketId: 'TCK-4823',
+    totalTime: '20s',
+    ticketDraft: 'svc-backup-prod received 42 failed login attempts from 203.0.113.88 within 15 minutes.\n\nOTX: only 2 pulses on this IP, generic "scanning activity" tag, sitting in a shared hosting range — low confidence on its own. However svc-backup-prod carries backup-admin scope and has no MFA enrolled.\n\nPer RB-03, a high-privilege/service account under sustained brute force gets flagged for analyst review regardless of source reputation.\n\nRecommendation: confirm with the account owner this wasn\'t a misconfigured backup job retrying with a stale credential, force a password rotation, and evaluate enforcing MFA or IP allow-listing on this account. Needs a human call on lockout policy — routing to you rather than auto-closing. — Drafted by Aegis Triage Agent, pending analyst approval.',
+    trace: [
+      {tool:'AlienVault OTX', label:'Queried source IP 203.0.113.88', detail:'2 pulses, shared hosting range, "scanning activity" tag — low confidence.', time:'2.0s', kind:'tool'},
+      {tool:'IAM Lookup', label:'Checked svc-backup-prod account scope', detail:'Service account with backup-admin scope. No MFA enrolled.', time:'1.2s', kind:'tool'},
+      {tool:'Runbook KB Retrieval', label:'Matched RB-03 — Brute Force / Credential Stuffing Response', detail:'Similarity 0.83 — 42 attempts in 15min against a privileged account.', time:'1.0s', kind:'tool', runbookRef:'RB-03'},
+      {tool:'MITRE ATT&CK Mapper', label:'Mapped to T1110.001, T1078', detail:'Sustained password-guessing pattern against a valid account.', time:'0.8s', kind:'tool'},
+      {tool:'Reasoning', label:'Verdict: Needs analyst review (61% confidence)', detail:'Source reputation inconclusive, but privileged account + no MFA raises the stakes enough to route to a human rather than auto-close.', time:'2.6s', kind:'reasoning'},
+    ],
+  },
+  {
+    id: 'a4', title: 'Malicious file detected — invoice_08062026.exe', severity: 'critical',
+    source: 'CrowdStrike Falcon EDR', asset: 'LAPTOP-SALES-114 (10.42.19.62)',
+    timestamp: 'Today, 10:37 EDT', indicator: 'a3f5c9…e21b (SHA256, truncated)', indicatorType: 'File hash',
+    otxReputation: 'Malicious — Qakbot loader family (63 pulses)',
+    mitre: [{id:'T1204.002', name:'User Execution: Malicious File'}, {id:'T1055', name:'Process Injection'}],
+    verdict: 'real_threat', confidence: 97,
+    verdictDetail: 'Hash carries 63 OTX pulses tied to the Qakbot loader family, and EDR telemetry shows it attempted process injection immediately after launch from an Outlook attachment. High-confidence compromise.',
+    runbookMatch: {id:'RB-04', name:'Malware Detection & Endpoint Isolation'},
+    ticketId: 'TCK-4824',
+    totalTime: '16s',
+    ticketDraft: 'CrowdStrike flagged invoice_08062026.exe on LAPTOP-SALES-114, launched from an Outlook attachment.\n\nOTX: 63 pulses associating this hash with the Qakbot loader family, first seen 6 days ago. EDR telemetry shows the process attempted injection into explorer.exe immediately after launch.\n\nMITRE: T1204.002 (User Execution: Malicious File), T1055 (Process Injection).\n\nRecommendation: isolate LAPTOP-SALES-114 immediately, block the hash org-wide at the EDR, notify the user, and escalate to Tier 2 for forensics and lateral-movement check. — Drafted by Aegis Triage Agent, pending analyst approval.',
+    trace: [
+      {tool:'AlienVault OTX', label:'Queried file hash', detail:'63 pulses, Qakbot loader family, first seen 6 days ago.', time:'1.6s', kind:'tool'},
+      {tool:'EDR Telemetry Pull', label:'Pulled CrowdStrike process tree', detail:'Spawned from an Outlook attachment; attempted injection into explorer.exe.', time:'1.3s', kind:'tool'},
+      {tool:'Runbook KB Retrieval', label:'Matched RB-04 — Malware Detection & Endpoint Isolation', detail:'Similarity 0.95 — known malware family, ≥10 pulse threshold met.', time:'0.9s', kind:'tool', runbookRef:'RB-04'},
+      {tool:'MITRE ATT&CK Mapper', label:'Mapped to T1204.002, T1055', detail:'User-executed loader with process injection behavior.', time:'0.7s', kind:'tool'},
+      {tool:'Reasoning', label:'Verdict: Real threat (97% confidence)', detail:'Known malware family plus observed injection behavior. Recommend immediate isolation.', time:'2.9s', kind:'reasoning'},
+    ],
+  },
+  {
+    id: 'a5', title: 'Encoded PowerShell execution — DC-SVR-02', severity: 'high',
+    source: 'Sysmon / Windows Event Forwarding', asset: 'DC-SVR-02 (Domain Controller)',
+    timestamp: 'Today, 06:55 EDT', indicator: 'powershell.exe -enc JAB4AC0… (base64, truncated)', indicatorType: 'Command line',
+    otxReputation: '5 pulses reference this pattern as an AMSI-bypass loader',
+    mitre: [{id:'T1059.001', name:'Command and Scripting Interpreter: PowerShell'}, {id:'T1027', name:'Obfuscated Files or Information'}],
+    verdict: 'real_threat', confidence: 90,
+    verdictDetail: 'Encoded PowerShell on a domain controller is never expected admin behavior. Combined with an AMSI-bypass signature, RB-05 calls for escalation regardless of feed maturity.',
+    runbookMatch: {id:'RB-05', name:'Suspicious PowerShell Execution'},
+    ticketId: 'TCK-4825',
+    totalTime: '13s',
+    ticketDraft: 'Base64-encoded PowerShell executed on DC-SVR-02 (domain controller).\n\nOTX: 5 pulses reference this exact encoded pattern as a known AMSI-bypass loader.\n\nMITRE: T1059.001 (PowerShell), T1027 (Obfuscated Files or Information).\n\nRecommendation: treat as confirmed malicious — encoded PowerShell has no legitimate admin use case on a DC. Isolate if AD replication allows, capture memory before remediation, escalate to Tier 2. — Drafted by Aegis Triage Agent, pending analyst approval.',
+    trace: [
+      {tool:'AlienVault OTX', label:'Queried decoded payload signature', detail:'5 pulses match this pattern to a known AMSI-bypass loader.', time:'1.9s', kind:'tool'},
+      {tool:'Runbook KB Retrieval', label:'Matched RB-05 — Suspicious PowerShell Execution', detail:'Similarity 0.89 — encoded execution on a domain controller.', time:'1.0s', kind:'tool', runbookRef:'RB-05'},
+      {tool:'MITRE ATT&CK Mapper', label:'Mapped to T1059.001, T1027', detail:'Scripting-interpreter abuse with obfuscated payload.', time:'0.8s', kind:'tool'},
+      {tool:'Reasoning', label:'Verdict: Real threat (90% confidence)', detail:'DC + obfuscated PowerShell is high-severity regardless of OTX feed maturity on this specific sample.', time:'2.5s', kind:'reasoning'},
+    ],
+  },
+  {
+    id: 'a6', title: 'Impossible travel — Lagos, NG 40min after Boston, US', severity: 'medium',
+    source: 'Azure AD Identity Protection', asset: 'r.chen@company.com',
+    timestamp: 'Today, 05:18 EDT', indicator: '102.89.44.201', indicatorType: 'Source IP',
+    otxReputation: '1 pulse, generic "residential proxy" tag — not conclusively malicious',
+    mitre: [{id:'T1078.004', name:'Valid Accounts: Cloud Accounts'}, {id:'T1621', name:'Multi-Factor Authentication Request Generation'}],
+    verdict: 'needs_review', confidence: 55,
+    verdictDetail: 'MFA was approved on the second login, which per RB-06 usually signals MFA fatigue/phishing rather than a stolen-password-only compromise — needs a direct check with the user before any account action.',
+    runbookMatch: {id:'RB-06', name:'Impossible Travel / Anomalous Login'},
+    ticketId: 'TCK-4826',
+    totalTime: '17s',
+    ticketDraft: "r.chen's account logged in from Boston, US and Lagos, NG 40 minutes apart — physically impossible travel. The Lagos login approved an MFA prompt.\n\nOTX: source IP has only 1 pulse, generic \"residential proxy\" tag — not conclusively malicious on its own.\n\nPer RB-06, an approved MFA prompt on an impossible-travel login usually points to MFA fatigue or phishing rather than a stolen-password-only compromise.\n\nRecommendation: call r.chen directly to confirm the Lagos login (don't just email), revoke active sessions if they deny it, and remind them to reject unexpected MFA prompts. — Drafted by Aegis Triage Agent, pending analyst approval.",
+    trace: [
+      {tool:'AlienVault OTX', label:'Queried source IP 102.89.44.201', detail:'1 pulse, generic residential-proxy tag — inconclusive.', time:'1.7s', kind:'tool'},
+      {tool:'Azure AD Sign-in Logs', label:'Pulled sign-in history for r.chen', detail:'MFA prompt was approved on the Lagos login, not rejected.', time:'1.1s', kind:'tool'},
+      {tool:'Runbook KB Retrieval', label:'Matched RB-06 — Impossible Travel / Anomalous Login', detail:'Similarity 0.85 — impossible travel with an approved MFA prompt.', time:'1.0s', kind:'tool', runbookRef:'RB-06'},
+      {tool:'MITRE ATT&CK Mapper', label:'Mapped to T1078.004, T1621', detail:'Valid cloud account use plus signs of MFA-prompt-bombing.', time:'0.7s', kind:'tool'},
+      {tool:'Reasoning', label:'Verdict: Needs analyst review (55% confidence)', detail:'Approved MFA suggests fatigue/phishing, not a clean credential theft — needs direct user confirmation before any lockout.', time:'2.3s', kind:'reasoning'},
+    ],
+  },
+];
+
+const RUNBOOKS = [
+  {id:'RB-01', title:'Outbound C2 Beaconing Response', updated:'2026-06-12', tags:['Network','C2'],
+    body:'If a destination IP has ≥3 OTX pulses tagged C2/malware AND the connection shows a non-standard port or a repeating interval → escalate as confirmed C2. Isolate the source host, block the destination at the perimeter, and open a Tier-2 forensics ticket. Do not wait for a second data point.'},
+  {id:'RB-02', title:'Phishing Triage & User-Reported Email', updated:'2026-05-30', tags:['Email','Social Engineering'],
+    body:'If the sender domain has no OTX pulses AND embedded links resolve to known SaaS/billing platforms (not lookalike domains) AND there is no credential-harvest form → likely legitimate-but-unwanted spam. Close as false positive, soft-block the sender, and send the reporter a one-line thanks. Escalate instead if any link resolves to a credential form or a lookalike brand domain.'},
+  {id:'RB-03', title:'Brute Force / Credential Stuffing Response', updated:'2026-07-01', tags:['Identity','Access'],
+    body:'If failed attempts ≥20 from a single IP within 15 minutes AND the target account is high-privilege or a service account → flag for analyst review even if source IP reputation is inconclusive. Never auto-close on a privileged account. Recommend password rotation and check MFA/allow-list status.'},
+  {id:'RB-04', title:'Malware Detection & Endpoint Isolation', updated:'2026-07-22', tags:['Endpoint','Malware'],
+    body:'If a file hash has ≥10 OTX pulses tagged to a known malware family → recommend endpoint isolation and Tier-2 forensics regardless of the EDR\'s own detection confidence score. Pull the process tree before isolating so lateral movement can be traced afterward.'},
+  {id:'RB-05', title:'Suspicious PowerShell Execution', updated:'2026-04-18', tags:['Endpoint','LOLBins'],
+    body:'Encoded or obfuscated PowerShell on a domain controller or any Tier-0 asset is never expected admin behavior. Escalate as real threat regardless of OTX confidence on the specific payload signature, and isolate if AD replication health allows it. Capture memory before remediating.'},
+  {id:'RB-06', title:'Impossible Travel / Anomalous Login', updated:'2026-03-09', tags:['Identity','Cloud'],
+    body:'Impossible travel where the second login approves an MFA prompt (rather than the prompt being rejected or timing out) usually indicates MFA fatigue or phishing, not a stolen-password-only compromise. Verify directly with the user by phone before disabling the account or forcing a reset.'},
+];
+
+const SEV_CLASS = {critical:'tag-accent', high:'tag-accent', medium:'tag-outline', low:'tag-neutral'};
+const SEV_LABEL = {critical:'Critical', high:'High', medium:'Medium', low:'Low'};
+const STATUS_CLASS = {pending:'tag-outline', approved:'tag-accent', rejected:'tag-neutral'};
+const STATUS_LABEL = {pending:'Pending Review', approved:'Approved', rejected:'Rejected'};
+const VERDICT_CLASS = {real_threat:'tag-accent', false_positive:'tag-neutral', needs_review:'tag-outline'};
+const VERDICT_LABEL = {real_threat:'Real Threat', false_positive:'False Positive', needs_review:'Needs Review'};
+
+function answerQuestion(alert, q) {
+  const s = q.toLowerCase();
+  if (s.includes('confiden') || s.includes('sure')) return `Confidence is ${alert.confidence}% — based on the OTX reputation (${alert.otxReputation}) and the matched runbook ${alert.runbookMatch.id}.`;
+  if (s.includes('why') || s.includes('verdict') || s.includes('reason')) return alert.verdictDetail;
+  if (s.includes('ioc') || s.includes('indicator')) return `Indicator: ${alert.indicator} (${alert.indicatorType}). OTX says: ${alert.otxReputation}`;
+  if (s.includes('mitre') || s.includes('attack') || s.includes('techni')) return `Mapped techniques: ${alert.mitre.map(m => m.id + ' ' + m.name).join('; ')}.`;
+  if (s.includes('runbook')) return `Used ${alert.runbookMatch.id} — ${alert.runbookMatch.name}.`;
+  if (s.includes('ticket') || s.includes('draft')) return 'The draft ticket comment is in the panel on the left — click Edit to change it, then Approve to send it to the ticketing system or Reject to discard.';
+  return "I don't have a canned answer for that yet — try asking about confidence, the indicator, the MITRE mapping, the runbook used, or the ticket draft.";
+}
+
+class Component extends DCLogic {
+  state = {
+    activeTab: 'queue',
+    selectedId: ALERTS[0].id,
+    traceOpen: {},
+    editingDraft: {},
+    draftText: Object.fromEntries(ALERTS.map(a => [a.id, a.ticketDraft])),
+    status: Object.fromEntries(ALERTS.map(a => [a.id, 'pending'])),
+    statusMsg: {},
+    chatMode: 'ask',
+    chatLog: Object.fromEntries(ALERTS.map(a => [a.id, []])),
+    chatInput: '',
+    teachTitle: '',
+    teachBody: '',
+    runbooks: RUNBOOKS.slice(),
+    runbookEditing: null,
+    runbookEditVal: '',
+    highlightRunbook: null,
+    toast: null,
+  };
+
+  flashToast(msg) {
+    this.setState({ toast: msg });
+    clearTimeout(this._toastTimer);
+    this._toastTimer = setTimeout(() => this.setState({ toast: null }), 3200);
+  }
+
+  renderVals() {
+    const st = this.state;
+    const alerts = ALERTS;
+    const current = alerts.find(a => a.id === st.selectedId) || alerts[0];
+
+    const queueItems = alerts.map(a => ({
+      title: a.title, source: a.source, timestamp: a.timestamp,
+      severityLabel: SEV_LABEL[a.severity], severityTagClass: SEV_CLASS[a.severity],
+      statusLabel: STATUS_LABEL[st.status[a.id]], statusTagClass: STATUS_CLASS[st.status[a.id]],
+      rowBg: a.id === st.selectedId ? 'var(--color-accent-100)' : 'var(--color-surface)',
+      onSelect: () => this.setState({ selectedId: a.id }),
+    }));
+
+    const traceOpen = !!st.traceOpen[current.id];
+    const traceSteps = current.trace.map(step => ({
+      tool: step.tool, label: step.label, detail: step.detail, time: step.time,
+      isReasoning: step.kind === 'reasoning', isTool: step.kind === 'tool',
+      hasRunbookLink: !!step.runbookRef,
+      runbookRefLabel: step.runbookRef || '',
+      goToRunbook: () => this.setState({ activeTab: 'runbooks', highlightRunbook: step.runbookRef }),
+    }));
+
+    const editing = !!st.editingDraft[current.id];
+    const status = st.status[current.id];
+
+    const runbooksView = st.runbooks.map(rb => {
+      const isEditing = st.runbookEditing === rb.id;
+      return {
+        id: rb.id, title: rb.title, updated: rb.updated, tagList: rb.tags,
+        body: rb.body, isEditing, isNotEditing: !isEditing,
+        editValue: isEditing ? st.runbookEditVal : rb.body,
+        outline: st.highlightRunbook === rb.id ? '2px solid var(--color-accent)' : 'none',
+        onEditChange: (e) => this.setState({ runbookEditVal: e.target.value }),
+        startEdit: () => this.setState({ runbookEditing: rb.id, runbookEditVal: rb.body }),
+        cancel: () => this.setState({ runbookEditing: null }),
+        save: () => {
+          this.setState(s => ({
+            runbooks: s.runbooks.map(r => r.id === rb.id ? { ...r, body: s.runbookEditVal, updated: 'just now' } : r),
+            runbookEditing: null,
+          }));
+          this.flashToast(`${rb.id} updated — future triage uses the new wording immediately.`);
+        },
+      };
+    });
+
+    const chatLog = st.chatLog[current.id] || [];
+
+    const doSend = () => {
+      const q = st.chatInput.trim();
+      if (!q) return;
+      const answer = answerQuestion(current, q);
+      this.setState(s => ({
+        chatLog: { ...s.chatLog, [current.id]: [...(s.chatLog[current.id] || []), { role: 'analyst', text: q }, { role: 'agent', text: answer }] },
+        chatInput: '',
+      }));
+    };
+
+    const saveTeach = () => {
+      if (!st.teachTitle.trim() || !st.teachBody.trim()) return;
+      const newId = 'RB-' + String(st.runbooks.length + 1).padStart(2, '0');
+      const newRb = { id: newId, title: st.teachTitle.trim(), updated: 'just now', tags: ['Analyst-taught'], body: st.teachBody.trim() };
+      this.setState(s => ({
+        runbooks: [...s.runbooks, newRb],
+        chatLog: { ...s.chatLog, [current.id]: [...(s.chatLog[current.id] || []), { role: 'agent', text: `Got it — saved as ${newId} (${newRb.title}). I'll apply this on future matching alerts.` }] },
+        teachTitle: '', teachBody: '', chatMode: 'ask',
+      }));
+      this.flashToast(`${newId} saved to the runbook KB.`);
+    };
+
+    return {
+      orgName: this.props.orgName ?? 'Contoso Financial',
+      statLine: { agent: (this.props.agentSeconds ?? 18) + 's', manual: (this.props.manualMinutes ?? 12) + 'm' },
+      queueCount: alerts.length,
+      queueItems,
+      nav: {
+        isQueue: st.activeTab === 'queue', isRunbooks: st.activeTab === 'runbooks',
+        queueAria: st.activeTab === 'queue' ? 'page' : '', runbooksAria: st.activeTab === 'runbooks' ? 'page' : '',
+        toQueue: (e) => { e.preventDefault(); this.setState({ activeTab: 'queue' }); },
+        toRunbooks: (e) => { e.preventDefault(); this.setState({ activeTab: 'runbooks' }); },
+      },
+      current: {
+        title: current.title, source: current.source, asset: current.asset, timestamp: current.timestamp,
+        indicator: current.indicator, indicatorType: current.indicatorType, otxReputation: current.otxReputation,
+        statusLabel: STATUS_LABEL[status], statusTagClass: STATUS_CLASS[status],
+        stepCount: current.trace.length, totalTime: current.totalTime,
+        traceOpen, chevronDeg: traceOpen ? 180 : 0,
+        toggleTrace: () => this.setState(s => ({ traceOpen: { ...s.traceOpen, [current.id]: !s.traceOpen[current.id] } })),
+        traceSteps,
+        mitre: current.mitre,
+        verdictLabel: VERDICT_LABEL[current.verdict], verdictTagClass: VERDICT_CLASS[current.verdict],
+        confidence: current.confidence, verdictDetail: current.verdictDetail,
+        runbookMatchLabel: `${current.runbookMatch.id} — ${current.runbookMatch.name}`,
+        goToMatchedRunbook: () => this.setState({ activeTab: 'runbooks', highlightRunbook: current.runbookMatch.id }),
+        ticketId: current.ticketId,
+        draftValue: st.draftText[current.id],
+        isReadOnly: !editing,
+        draftOpacity: editing ? 1 : 0.85,
+        onDraftChange: (e) => this.setState(s => ({ draftText: { ...s.draftText, [current.id]: e.target.value } })),
+        startEdit: () => this.setState(s => ({ editingDraft: { ...s.editingDraft, [current.id]: true } })),
+        actionsDisabled: status !== 'pending',
+        statusMessage: st.statusMsg[current.id] || '',
+        approve: () => {
+          this.setState(s => ({
+            status: { ...s.status, [current.id]: 'approved' },
+            editingDraft: { ...s.editingDraft, [current.id]: false },
+            statusMsg: { ...s.statusMsg, [current.id]: `Approved — comment posted to ${current.ticketId}.` },
+          }));
+          this.flashToast(`${current.ticketId} updated — 20s vs. ~12min manual.`);
+        },
+        reject: () => {
+          this.setState(s => ({
+            status: { ...s.status, [current.id]: 'rejected' },
+            editingDraft: { ...s.editingDraft, [current.id]: false },
+            statusMsg: { ...s.statusMsg, [current.id]: 'Rejected — routed to Tier 2 for manual review.' },
+          }));
+          this.flashToast('Draft rejected — nothing was sent.');
+        },
+      },
+      chat: {
+        isAsk: st.chatMode === 'ask', isTeach: st.chatMode === 'teach',
+        setAsk: () => this.setState({ chatMode: 'ask' }), setTeach: () => this.setState({ chatMode: 'teach' }),
+        log: chatLog.map(m => ({
+          text: m.text, align: m.role === 'analyst' ? 'flex-end' : 'flex-start',
+          bg: m.role === 'analyst' ? 'var(--color-accent-100)' : 'var(--color-surface)',
+          color: 'var(--color-text)',
+        })),
+        isEmpty: chatLog.length === 0,
+        input: st.chatInput, setInput: (e) => this.setState({ chatInput: e.target.value }),
+        onKeyDown: (e) => { if (e.key === 'Enter') { e.preventDefault(); doSend(); } },
+        send: doSend,
+        teachTitle: st.teachTitle, setTeachTitle: (e) => this.setState({ teachTitle: e.target.value }),
+        teachBody: st.teachBody, setTeachBody: (e) => this.setState({ teachBody: e.target.value }),
+        teachDisabled: !st.teachTitle.trim() || !st.teachBody.trim(),
+        saveTeach,
+      },
+      runbooksView,
+      toast: st.toast,
+    };
+  }
+}
+
+</script>
+</body>
+</html>
